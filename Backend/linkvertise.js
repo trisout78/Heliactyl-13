@@ -19,8 +19,16 @@ module.exports.load = async function (app, db) {
             return res.redirect(`/lv?err=REACHEDDAILYLIMIT`)
         }
 
+
+        let referer = req.headers.referer
+        if (!referer) return res.send('An error occured with your browser!')
+        referer = referer.toLowerCase()
+        if (referer.includes('?')) referer = referer.split('?')[0]
+        if (!referer.endsWith(`/lv`) && !referer.endsWith(`/lv/`)) return res.send('An error occured with your browser!')
+        if (!referer.endsWith(`/`)) referer += `/`
+
         const code = makeid(12)
-        const lvurl = linkvertise(settings.linkvertise.userid + `redeem/${code}`)
+        const lvurl = linkvertise(settings.linkvertise.userid, referer + `redeem?code=${code}`)
 
         lvcodes[req.session.userinfo.id] = {
             code: code,
@@ -31,7 +39,7 @@ module.exports.load = async function (app, db) {
         res.redirect(lvurl)
     })
 
-    app.get(`/lv/redeem/:code`, async (req, res) => {
+    app.get(`/lv/redeem`, async (req, res) => {
         if (!req.session.pterodactyl) return res.redirect("/");
 
         if (cooldowns[req.session.userinfo.id] && cooldowns[req.session.userinfo.id] > Date.now()) {
@@ -40,9 +48,9 @@ module.exports.load = async function (app, db) {
             delete cooldowns[req.session.userinfo.id]
         }
 
-        // We get the code from the paramters, eg (client.domain.com/lv/redeem/abc123) here "abc123" is the code
-        const code = req.params.code
+        const code = req.query.code
         if (!code) return res.send('An error occured with your browser!')
+        if (!req.headers.referer || !req.headers.referer.includes('linkvertise.com')) return res.send('<p>Hm... our systems detected something going on! Please make sure you are not using an ad blocker (or linkvertise bypasser).</p> <img src="https://i.imgur.com/lwbn3E9.png" alt="robot" height="300">')
 
         const usercode = lvcodes[req.session.userinfo.id]
         if (!usercode) return res.redirect(`/lv`)
@@ -51,7 +59,7 @@ module.exports.load = async function (app, db) {
 
         // Checking at least the minimum allowed time passed between generation and completion
         if (((Date.now() - usercode.generated) / 1000) < settings.linkvertise.minTimeToComplete) {
-            return res.send('A linkvertise bypasser has been detected. <a href="../dashboard">Click here</a> to return to the dashboard.')
+            return res.send('<p>Hm... our systems detected something going on! Please make sure you are not using an ad blocker (or linkvertise bypasser). <a href="/lv">Generate another link</a></p> <img src="https://i.imgur.com/lwbn3E9.png" alt="robot" height="300">')
         }
 
         cooldowns[req.session.userinfo.id] = Date.now() + (settings.linkvertise.cooldown * 1000)
