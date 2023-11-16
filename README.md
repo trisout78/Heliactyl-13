@@ -1,4 +1,3 @@
-# Linkvertise Is Fixed By Trisout
 ![Heliactyl](https://cdn.discordapp.com/attachments/987734229469253674/1000790022263423116/Copy_of_citric_3.png)
 
 <hr>
